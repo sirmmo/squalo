@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block owner %}
+<a class="btn btn-default" href="/add">Add Database</a>
+{% endblock owner %}
+
+{%block content%}
+<div class="container">
+	{% for dataspace in user.dataspaces.all %}
+	<a href="/data/{{user}}/{{dataspace.name}}">{{dataspace}}</a>
+	{% endfor %}
+
+</div>
+{%endblock content%}

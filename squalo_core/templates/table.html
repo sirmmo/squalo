@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{%block content%}
+<div class="container">
+	<table class="table"><tr>
+	{% for field in table.fields.all %}
+		<th>{{field.name}}</th>
+	{% endfor %}
+	</tr>
+	{% for row in rows %}
+	<tr>
+		{% for field in row %}
+		<td>{{field}}</td>
+		{% endfor %}
+	</tr>
+	{% endfor %}
+	</table>
+	<nav>
+  <ul class="pagination">
+    <li>
+      <a href="?p={{prev}}" aria-label="Previous">
+        <span aria-hidden="true">&laquo;</span>
+      </a>
+    </li>
+    {% for page in pages %}
+    <li><a href="?p={{page}}">{{page}}</a></li>
+    {% endfor %}
+    <li>
+      <a href="?p={{next}}" aria-label="Next">
+        <span aria-hidden="true">&raquo;</span>
+      </a>
+    </li>
+  </ul>
+</nav>
+</div>
+{%endblock content%}
