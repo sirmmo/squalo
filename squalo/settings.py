@@ -96,4 +96,6 @@ TEMPLATE_CONTEXT_PROCESSORS = (
     'social.apps.django_app.context_processors.login_redirect',
 )
 
+MEDIA_ROOT=os.path.join(BASE_DIR, "uploads")
+
 from local_settings import *

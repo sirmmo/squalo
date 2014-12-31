@@ -2,11 +2,11 @@
 	<head>
 		<link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css" rel="stylesheet">
 		<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
-		<link href="//maxcdn.bootstrapcdn.com/bootswatch/3.3.1/superhero/bootstrap.min.css" rel="stylesheet">
+		<link href="//maxcdn.bootstrapcdn.com/bootswatch/3.3.1/slate/bootstrap.min.css" rel="stylesheet">
 	</head>
 	<body>
 		<header>
-			<nav class="navbar navbar-default">
+			<nav class="navbar navbar-default navbar-fixed">
 			  <div class="container-fluid">
 			    <!-- Brand and toggle get grouped for better mobile display -->
 			    <div class="navbar-header">
@@ -40,7 +40,7 @@
 
 		<div class="jumbotron">
 			<div class="container">
-				<h1>{{title}}</h1>
+				<h1><i class="fa fa-fw fa-{{icon}}"></i>{{title}}</h1>
 				{% if owner %}
 				<p>{%block owner%}{%endblock owner%}</p>
 				{% endif %}

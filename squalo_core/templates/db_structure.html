@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 
+{% block owner %}
+<a class="btn btn-default" href="/update/{{db.owner.username}}/{{db.name}}/">Update Database</a>
+{% endblock owner %}
+
+
 {%block content%}
 <div class="container">
 	{% for model in db.models.all %}
