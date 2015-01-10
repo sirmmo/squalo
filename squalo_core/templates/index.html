@@ -5,4 +5,22 @@
 <p><a href="http://it.wiktionary.org/wiki/squalo" target="_blank">Squalo [/'skwalo/]</a> is the italian word for Shark. The pun is obvious: Shark eats stuff, Shark eats SQL file, SQL similar to Squalo. Squalo eats SQLite files! </p>
 <p>Squalo helps you easily create an API around a SQLite database, wherever it comes from.</p>
 </div>
+
+<div class="jumbotron">
+<div class="container">
+	<h2>Users</h2>
+	</div>
+</div>
+
+<div class="container">
+	{%for user in users%}
+	<div class="col-xs-3">
+		<div class="panel panel-default">
+			<div class="panel-heading"><a href="/data/{{user.username}}">{{user.username}}</a></div>
+			<div class="panel-body"><i class="fa fa-fw fa-database"></i>{{user.dataspaces.all.count}} Databases loaded</div>
+		</div>
+
+	</div>
+	{%endfor%}
+</div>
 {%endblock%}

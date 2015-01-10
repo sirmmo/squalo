@@ -38,6 +38,10 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'squalo_core',
     'social.apps.django_app.default',
+
+    #"django_forms_bootstrap",
+    #"payments",
+    #'plans', 
 )
 
 MIDDLEWARE_CLASSES = (
