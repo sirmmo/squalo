@@ -1,25 +1,27 @@
 {% extends "base.html" %}
 
 {% block owner %}
-<a class="btn btn-default" href="/update/{{db.owner.username}}/{{db.name}}/">Update Database</a>
+<a class="btn btn-default" href="/update/{{db.owner.username}}/{{db.name}}/"><i class="fa fa-fw fa-refresh"></i>Update Database</a>
+<a class="btn btn-danger" href="/delete/{{db.owner.username}}/{{db.name}}/"><i class="fa fa-fw fa-trash"></i>Delete Database</a>
 {% endblock owner %}
 
 
 {%block content%}
 <div class="container">
 	{% for model in db.models.all %}
+	{%if model.internal%}{%else%}
 	<div class="panel">
 		<div class="panel-heading"><a href="/data/{{db.owner.username}}/{{db.name}}/{{model}}">{{model}}</a></div>
 		<div class="panel-body">
 			<ul>
 			{% for field in model.fields.all %}
-				<li>{{field}}</li>
+				<li><i class="fa fa-fw fa-{%if field.geo%}globe{%else%}{%endif%}"></i>{{field}}</li>
 			{% endfor %}
 			</ul>
 		</div>
 
 	</div>
-	
+	{% endif %}
 	{% endfor %}
 
 </div>

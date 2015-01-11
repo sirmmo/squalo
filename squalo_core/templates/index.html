@@ -16,8 +16,8 @@
 	{%for user in users%}
 	<div class="col-xs-3">
 		<div class="panel panel-default">
-			<div class="panel-heading"><a href="/data/{{user.username}}">{{user.username}}</a></div>
-			<div class="panel-body"><i class="fa fa-fw fa-database"></i>{{user.dataspaces.all.count}} Databases loaded</div>
+			<div class="panel-heading"><a href="/data/{{user.username}}"><i class="fa fa-fw fa-user"></i> {{user.username}}</a></div>
+			<div class="panel-body"><i class="fa fa-fw fa-database"></i> {{user.dataspaces.all.count}} Databases loaded</div>
 		</div>
 
 	</div>

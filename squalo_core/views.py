@@ -7,12 +7,12 @@ from django.core.files import File
 
 from .models import *
 
-import sqlite3
-
+from pysqlite2 import dbapi2 as sqlite3
+import sys, traceback
 import json
 
 def index(request):
-	return render(request, "index.html", {"title":"Squalo SQLite Eater"})
+	return render(request, "index.html", {"title":"Squalo SQLite Eater", "users":User.objects.all()})
 	
 def profile(request):
 	return HttpResponseRedirect("/data/%s" % request.user.username)
@@ -38,12 +38,22 @@ def add_database(request):
 			the_file = d.sqlite_file.path
 			print the_file
 			con = sqlite3.connect(the_file)
+			con.enable_load_extension(True)
 			cursor = con.cursor()
+			spatialite_tables = ["SpatialIndex","sql_statements_log","virts_geometry_columns_auth","views_geometry_columns_auth","geometry_columns_auth","geometry_columns_time","virts_geometry_columns_field_infos","views_geometry_columns_field_infos","geometry_columns_field_infos","virts_geometry_columns_statistics","views_geometry_columns_statistics","geometry_columns_statistics","virts_geometry_columns","views_geometry_columns","geometry_columns","sqlite_sequence","spatialite_history","spatial_ref_sys",]
+			for table in cursor.execute("SELECT name, sql FROM sqlite_master WHERE type='table';"):
+				if table[0] == "spatial_ref_sys":
+					con.load_extension("/usr/lib/x86_64-linux-gnu/libspatialite.so.5.1.0")
+					d.geo = True
+					geo_magic = con.execute("select * from geometry_columns")
+					d.save()
 			for table in cursor.execute("SELECT name, sql FROM sqlite_master WHERE type='table';"):
 				m = Model()
 				m.dataspace = d
 				m.name = table[0]
+				m.internal = d.geo and table[0] in spatialite_tables
 				m.save()
+
 
 				f_cursor = con.execute("select * from "+table[0])
 
@@ -51,21 +61,37 @@ def add_database(request):
 					f = Field()
 					f.model = m
 					f.name = field[0]
+					if d.geo:
+						for gcol in geo_magic:
+							if m.name == gcol[0] and f.name == gcol[1]:
+								f.geo = True
 					f.save()
 
 			return HttpResponseRedirect("/data/%s/%s" % (request.user.username, d.name))
 		except Exception, e:
 			return render(request, "upload.html", {"title":"Upload", "error":str(e)})
 
-
+@login_required 
+def delete(request, user, db):
+	the_db = Dataspace.objects.get(owner = request.user, name=db)
+	the_db.delete()
+	return HttpResponseRedirect("/data/%s" % user)
+	
+@csrf_exempt
+@login_required 
 def update(request, user, db):
 	if request.method=="GET":
 		return render(request, "upload.html", {"title":"Upload", "name":db})
+	else:
+		the_db = Dataspace.objects.get(owner = request.user, name=db)
+		the_db.delete()
+		return add_database(request)
+
 
 def user(request, user):
 	usr = User.objects.get(username=user)
 	return render(request, "user.html", {
-		"user": usr, 
+		"the_user": usr, 
 		"title":usr.username,
 		"breadcrumb":[{
 			"url":"/data/"+user, 
@@ -93,7 +119,7 @@ def database(request, user, db):
 			"name":db
 		}],
 		"owner":user==request.user.username,
-		"icon":"database"
+		"icon":"database" if not the_db.geo else "globe"
 	})
 
 def database_api(request,user,db):
@@ -107,48 +133,80 @@ def database_api(request,user,db):
 def model(request, user, db, model):
 	the_db = Dataspace.objects.get(owner__username = user, name=db)
 	the_table = the_db.models.get(name=model)
-	fields = [field.name for field  in the_table.fields.all()]
+	fields = [field.name for field  in the_table.fields.filter(geo=False)]
 	page = request.REQUEST.get("p","1")
 	page = int(page)
 	offset = (page-1)*100
-	rows = do_query(the_db, "select * from %s limit 100 offset %s;" % (model, offset))
-	rows = [[row[field]  for field in fields ] for row in rows]
-	return render(request, "table.html", {
-		"title":the_table.dataspace.name+"."+the_table.name,
-		"icon":"table",
-		"breadcrumb":[{
-			"url":"/data/"+user, 
-			"name":user
-		}, {
-			"url":"/data/"+user+"/"+db, 
-			"name":db
-		}, {
-			"url":"/data/"+user+"/"+db+"/"+model,
-			"name":model
-		} ],
-		"table":the_table, 
-		"rows":rows,
-		"prev":page-1,
-		"next":page+1,
-		"pages":range(max(1,page-2), page+3)})
+
+	q_select = ", ".join(["\""+f+"\"" for f in fields])
+
+	if Field.objects.filter(model=the_table, model__dataspace=the_db, geo=True).count() > 0 :
+		q_select = " asgeojson(%s) AS geojson, " %Field.objects.get(model=the_table, model__dataspace=the_db, geo=True).name + q_select
+		fields.append("geojson")
+	try:
+		rows = do_query(the_db, "select "+q_select+" from %s limit 100 offset %s;" % (model, offset), geo=False)
+		rows = [[row[field]  for field in fields ] for row in rows]
+		return render(request, "table.html", {
+			"title":the_table.dataspace.name+"."+the_table.name,
+			"icon":"table",
+			"breadcrumb":[{
+				"url":"/data/"+user, 
+				"name":user
+			}, {
+				"url":"/data/"+user+"/"+db, 
+				"name":db
+			}, {
+				"url":"/data/"+user+"/"+db+"/"+model,
+				"name":model
+			} ],
+			"table":the_table, 
+			"rows":rows,
+			"prev":page-1,
+			"next":page+1,
+			"pages":range(max(1,page-2), page+3)})
+	except Exception, e:
+		return render(request, "error.html", {
+			"error":str(e) + "--<pre>" + traceback.format_exc() +"</pre>" + "<pre>"+q_select+"</pre>",
+			"title":the_table.dataspace.name+"."+the_table.name,
+			"icon":"table",
+			"breadcrumb":[{
+				"url":"/data/"+user, 
+				"name":user
+			}, {
+				"url":"/data/"+user+"/"+db, 
+				"name":db
+			}, {
+				"url":"/data/"+user+"/"+db+"/"+model,
+				"name":model
+			} ],
+			"table":the_table, 
+			"pages":range(max(1,page-2), page+3)
+		})
 
 def query(request, user, db, model):
 	the_db = Dataspace.objects.get(owner__username = user, name=db)
 
-	q_select = request.REQUEST.get("select", "*")
+	q_from = request.REQUEST.get("from", model)
+	if the_db.models.filter(name=q_from).count() == 0:
+		return HttpResponse("No Model Found")
+
+
+	q_select = request.REQUEST.get("select", ", ".join([f.name for f in Field.objects.filter(model__name=q_from, model__dataspace=the_db) if not f.geo]))
 	q_select = q_select.split(",")
 	
-	q_from = request.REQUEST.get("from", model)
 
 	q_where = request.REQUEST.get("where", "[]")
 	q_where = json.loads(q_where)
 
-	if the_db.models.filter(name=q_from).count() == 0:
-		return HttpResponse("No Model Found")
 
 	query = "SELECT "
+
+	if Field.objects.filter(model__name=q_from, model__dataspace=the_db, geo=True).count() > 0 :
+		query += "  asgeojson(%s) AS geojson, " %Field.objects.get(model__name=q_from, model__dataspace=the_db, geo=True).name
+	
 	query +=",".join(q_select)
 	query +=" FROM " + q_from
+	query +=" LIMIT 10"
 
 	conds = []
 	for cond in q_where:
@@ -160,15 +218,30 @@ def query(request, user, db, model):
 		query +=" WHERE "
 		query += " AND ".join(conds)
 
-	return HttpResponse(json.dumps({"message":"results", "query":query, "results": do_query(the_db, query)}))
+	is_geo = Field.objects.filter(model__name=q_from, model__dataspace=the_db,geo=True).count()>0
+	return HttpResponse(json.dumps({"message":"results", "query":query, "results": do_query(the_db, query,geo=is_geo)}))
 
-def do_query(the_db, query):
+def do_query(the_db, query, **kwargs):
 	the_file = the_db.sqlite_file.path
 	the_con = sqlite3.connect(the_file)
+	the_con.enable_load_extension(True)
+	the_con.load_extension("/usr/lib/x86_64-linux-gnu/libspatialite.so.5.1.0")
 
 	ret = []
 	q = the_con.execute(query)
 	for row in q:
-		ret.append(dict(zip([d[0] for d in q.description],row)))
+		if kwargs.get("geo",False):
+			geo_el = {}
+			geo_el["attributes"]= dict(zip([d[0] for d in q.description],row))
+			geo_el["type"] = "Feature"
+			geo_el["geometry"] = json.loads(geo_el["attributes"]["geojson"])
+			del geo_el["attributes"]["geojson"]
+			ret.append(geo_el)
+		else:
+			ret.append(dict(zip([d[0] for d in q.description],row)))
+
+	if kwargs.get("geo",False):
+		ret = {"type":"FeatureCollection", "features":ret}
+
 	return ret
 
