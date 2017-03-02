@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block owner %}
+<a class="btn btn-default" href="/update/{{db.owner.username}}/{{db.name}}/"><i class="fa fa-fw fa-refresh"></i>Update Database</a>
+<a class="btn btn-danger" href="/delete/{{db.owner.username}}/{{db.name}}/"><i class="fa fa-fw fa-trash"></i>Delete Database</a>
+{% endblock owner %}
+
+
+{%block content%}
+<div class="container">
+	{% for model in db.models.all %}
+	{%if model.internal%}{%else%}
+	<div class="panel panel-default">
+		<div class="panel-heading">
+			<div>GET <a href="/api/{{db.owner.username}}/{{db.name}}/{{model}}">/api/{{db.owner.username}}/{{db.name}}/{{model}}</a> generic query {%if model.is_geo %}as geojson wrapped in a more descriptive response{% endif %}</div>
+			{%if model.is_geo %}<div>GET <a href="#/api/{{db.owner.username}}/{{db.name}}/{{model}}.geojson">DISABLED: /api/{{db.owner.username}}/{{db.name}}/{{model}}.geojson</a> unwrapped geojson response</div>{% endif %}
+			<div>GET <a href="/api/{{db.owner.username}}/{{db.name}}/{{model}}.schema">/api/{{db.owner.username}}/{{db.name}}/{{model}}.schema</a> to get the schema of the table</div>
+		</div>
+		<div class="panel-heading">
+			{%if model.is_geo %}<div>WFS <a href="#/wfs/{{db.owner.username}}/{{db.name}}/{{model}}">DISABLED: /wfs/{{db.owner.username}}/{{db.name}}/{{model}}</a> WFS server for the exposed data</div>{% endif %}
+			{%if model.is_geo_raser %}<div>WMS <a href="#/wms/{{db.owner.username}}/{{db.name}}/{{model}}">DISABLED: /wms/{{db.owner.username}}/{{db.name}}/{{model}}</a> WMS server for the exposed data</div>{% endif %}
+		</div>
+		
+		<div class="panel-body">
+			<h4>Parameters</h4>
+			<ul>
+				<li><dt>where=&lt;json></dt><dd>The json structure should contain the info about the values in an array containing json dicts containing the following elements: "field", with the name of the field, "op", operator (symbol or "like"), "val" with the value to be compared to. For example: [{"field":"id", "op":"=", "val":123}].</dd></li>
+				<li><dt>limit=&lt;int></dt><dd>The number of elements to retrieve.</dd></li>
+				<li><dt>offset=&lt;int></dt><dd>The offset of the elements to retrieve.</dd></li>
+				{%if model.is_geo %}
+				<li disabled><dt>DISABLED: bbox=&lt;bbox></dt><dd>Bounding box to retrieve elements within.</dd></li>
+				<li disabled><dt>DISABLED: nearest=&lt;point></dt><dd>Finds the first [limit] points that are nearest to [point].</dd></li>
+				<li disabled><dt>DISABLED: geo=&lt;field></dt><dd>The field on which to make the queries if more geographic fields are available.</dd></li>
+				{%endif%}
+			</ul>
+		</div>
+		<div class="panel-body">
+			<h4>Fields</h4>
+			<ul>
+			{% for field in model.fields.all %}
+				<li><i class="fa fa-fw fa-{%if field.geo%}globe{%else%}{%endif%}"></i>{{field}}</li>
+			{% endfor %}
+			</ul>
+		</div>
+
+	</div>
+	{% endif %}
+	{% endfor %}
+
+</div>
+{%endblock content%}

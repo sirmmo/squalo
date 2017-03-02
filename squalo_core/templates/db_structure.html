@@ -8,9 +8,16 @@
 
 {%block content%}
 <div class="container">
+	<nav class="navbar navbar-default">
+	    <div class="container-fluid">
+	        <ul class="nav navbar-nav">
+	          <li><a href="/data/{{db.owner}}/{{db}}/apidoc"><i class="fa fa-fw fa-file-text"></i>API</a></li>
+	        </ul>
+	    </div><!-- /.container-fluid -->
+  	</nav>
 	{% for model in db.models.all %}
 	{%if model.internal%}{%else%}
-	<div class="panel">
+	<div class="panel panel-default">
 		<div class="panel-heading"><a href="/data/{{db.owner.username}}/{{db.name}}/{{model}}">{{model}}</a></div>
 		<div class="panel-body">
 			<ul>

@@ -22,6 +22,9 @@ class Model(models.Model):
 	def __str__(self):
 		return self.name
 
+	def is_geo(self):
+		return self.fields.filter(geo=True).count()>0
+
 class Field(models.Model):
 	model = models.ForeignKey(Model, related_name='fields')
 	name = models.CharField(max_length=255)

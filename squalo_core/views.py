@@ -4,12 +4,13 @@ from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.core.files import File
+from django.views.decorators.clickjacking import xframe_options_exempt
 
 from .models import *
 
 from pysqlite2 import dbapi2 as sqlite3
 import sys, traceback
-import json
+import json, csv
 
 def index(request):
 	return render(request, "index.html", {"title":"Squalo SQLite Eater", "users":User.objects.all()})
@@ -125,10 +126,35 @@ def database(request, user, db):
 def database_api(request,user,db):
 	the_db = Dataspace.objects.get(owner__username = user, name=db)
 	return HttpResponse(json.dumps([{
-		"name":m.name, 
+		"title":m.name, 
 		"url":"/api/%s/%s/%s" % (user, db, m.name), 
-		"fields":[f.name for f in m.fields.all()]} for m in the_db.models.all()
+		"fields":[{"name":f.name, "title":f.name, "description":f.name, "constraints":{}} for f in m.fields.all()]} for m in the_db.models.filter(internal=False)
 	]))
+
+def schema_api(request,user,db, model):
+	the_db = Dataspace.objects.get(owner__username = user, name=db)
+	return HttpResponse(json.dumps([{
+		"title":m.name, 
+		"url":"/api/%s/%s/%s" % (user, db, m.name), 
+		"fields":[{"name":f.name, "title":f.name, "description":f.name, "constraints":{}} for f in m.fields.all()]} for m in the_db.models.filter(name=model, internal=False)
+	][0]))
+
+def apidoc(request, user, db):
+	the_db = Dataspace.objects.get(owner__username = user, name=db)
+	return render(request, "apidoc.html", {
+		"title":"APIdoc - "+ the_db.name,
+		"icon":"file-text",
+		"db":the_db,
+		"breadcrumb":[{
+				"url":"/data/"+user, 
+				"name":user
+			}, {
+				"url":"/data/"+user+"/"+db, 
+				"name":db
+			}, {
+				"url":"/data/"+user+"/"+db+"/apidoc",
+				"name":"apidoc"
+			} ],})
 
 def model(request, user, db, model):
 	the_db = Dataspace.objects.get(owner__username = user, name=db)
@@ -183,6 +209,7 @@ def model(request, user, db, model):
 			"pages":range(max(1,page-2), page+3)
 		})
 
+@xframe_options_exempt
 def query(request, user, db, model):
 	the_db = Dataspace.objects.get(owner__username = user, name=db)
 
@@ -199,6 +226,9 @@ def query(request, user, db, model):
 	q_where = json.loads(q_where)
 
 
+	q_limit= request.REQUEST.get("limit","10")
+	q_offset= request.REQUEST.get("offset","0")
+
 	query = "SELECT "
 
 	if Field.objects.filter(model__name=q_from, model__dataspace=the_db, geo=True).count() > 0 :
@@ -206,17 +236,21 @@ def query(request, user, db, model):
 	
 	query +=",".join(q_select)
 	query +=" FROM " + q_from
-	query +=" LIMIT 10"
 
 	conds = []
 	for cond in q_where:
 		if cond["op"].lower() == "like":
 			cond["val"] = "'%%%s%%'" % cond["val"]
+		elif cond["op"].lower() == "in":
+			cond["val"] = "(%s)" % ",".join([str(c) for c in cond["val"]])
 		conds.append("%s %s %s" % (cond["field"], cond["op"], cond["val"]))
 
 	if len(conds) > 0 :
 		query +=" WHERE "
 		query += " AND ".join(conds)
+
+
+	query +=" LIMIT %s OFFSET %s" % (q_limit, q_offset)
 
 	is_geo = Field.objects.filter(model__name=q_from, model__dataspace=the_db,geo=True).count()>0
 	return HttpResponse(json.dumps({"message":"results", "query":query, "results": do_query(the_db, query,geo=is_geo)}))

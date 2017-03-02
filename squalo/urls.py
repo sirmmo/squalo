@@ -11,12 +11,15 @@ urlpatterns = patterns('',
 
     url(r'^data/(?P<user>(\d|\w)+)$', 'squalo_core.views.user'),
     url(r'^data/(?P<user>(\d|\w)+)/(?P<db>(\s|\w)+)$', 'squalo_core.views.database'),
+    url(r'^data/(?P<user>(\d|\w)+)/(?P<db>(\s|\w)+)/apidoc$', 'squalo_core.views.apidoc'),
     url(r'^data/(?P<user>(\d|\w)+)/(?P<db>(\s|\w)+)/(?P<model>\w+)$', 'squalo_core.views.model'),
     url(r'^data/(?P<user>(\d|\w)+)/(?P<db>(\s|\w)+)/(?P<model>\w+)/toggle$', 'squalo_core.views.model'),
     
     url(r'^api/(?P<user>(\d|\w)+)$', 'squalo_core.views.user_api'),
     url(r'^api/(?P<user>(\d|\w)+)/(?P<db>\s|\w+)$', 'squalo_core.views.database_api'),
     url(r'^api/(?P<user>(\d|\w)+)/(?P<db>\s|\w+)/(?P<model>\w+)$', 'squalo_core.views.query'),
+    url(r'^api/(?P<user>(\d|\w)+)/(?P<db>\s|\w+)/(?P<model>\w+)\.schema$', 'squalo_core.views.schema_api'),
+    
     
     url(r'^accounts/profile', 'squalo_core.views.profile'),
     url(r'^logout', 'squalo_core.views.logout'),
